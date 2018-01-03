@@ -17,6 +17,12 @@ python3.5+, pysam, numpy, scipy, PIL
 -- `output_direcotry`: Path to a directory where output will be saved <br/>
 -- `number_of_threads`: Most threads it can use to generate images <br/>
 
+#### Example run:
+```./pileupProcessor.sh ~/illumina/chr3.bam ~/illumina/chr3.fa  ~/illumina/chr3_whole_chr.vcf.gz ~/pileup_output/test/ 8```
+
+---
+
+
 ### Specific site run using the python script
 ```python3 main.py --bam [bam_file_path] --ref [ref_fasta_file_path] --vcf [vcf_file_path] --output_dir [output_directory]  --parallel [bool] --max_threads [int] --contig [string] --site [string]```
 
@@ -31,4 +37,4 @@ python3.5+, pysam, numpy, scipy, PIL
 -- `site`: Site of the contig to focus (Default is empty) [Example: ":100000-200000"] <br/>
 
 #### Example run:
-python3 main.py --bam ~/illumina/chr3.bam --ref ~/illumina/chr3.fa --vcf ~/illumina/chr3_whole_chr.vcf.gz --output_dir ~/pileup_output/test/ --contig chr3 --site :100000-200000 --parallel True
+```python3 main.py --bam ~/illumina/chr3.bam --ref ~/illumina/chr3.fa --vcf ~/illumina/chr3_whole_chr.vcf.gz --output_dir ~/pileup_output/test/ --contig chr3 --site :100000-200000 --parallel True```
