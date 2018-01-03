@@ -1,24 +1,54 @@
+"""
+Implemented by: Kishwar Shafin
+Date: 02/01/2018
+"""
+
 import pysam
 import sys
 import numpy as np
 from PIL import Image
 from scipy import misc
 
+"""
+This script creates pileup images given a vcf record, bam alignment file and reference fasta file.
+
+imageChannels: imageChannels class handles how many channels to create for each base and how
+
+"""
+
 MAX_COLOR_VALUE = 254.0
 BASE_QUALITY_CAP = 40.0
 MAP_QUALITY_CAP = 60.0
 MAP_QUALITY_FILTER = 10.0
+
+
 class imageChannels:
-    def __init__(self, pileup_attributes, ref_base):
+    """
+    Handles how many channels to create for each base and their way of construction.
+    """
+
+    def __init__(self, pileup_attributes, ref_base, is_supporting):
+        """
+        Initialize a base with it's attributes
+        :param pileup_attributes: Attributes of a pileup base
+        :param ref_base: Reference base corresponding to that pileup base
+        """
         self.pileup_base = pileup_attributes[0]
         self.map_qual = pileup_attributes[1]
         self.base_qual = pileup_attributes[2]
         self.is_rev = pileup_attributes[3]
         self.ref_base = ref_base
         self.is_match = True if self.ref_base == self.pileup_base else False
+        self.is_supporting = is_supporting
 
     @staticmethod
     def get_base_color(base):
+        """
+        Get color based on a base.
+        - Uses different band of the same channel.
+        :param base:
+        :return:
+        """
         if base == 'A':
             return 250.0
         if base == 'C':
@@ -32,18 +62,33 @@ class imageChannels:
 
     @staticmethod
     def get_base_quality_color(base_quality):
+        """
+        Get a color spectrum given base quality
+        :param base_quality: value of base quality
+        :return:
+        """
         c_q = min(base_quality, BASE_QUALITY_CAP)
         color = MAX_COLOR_VALUE * c_q / BASE_QUALITY_CAP
         return color
 
     @staticmethod
     def get_map_quality_color(map_quality):
+        """
+        Get a color spectrum given mapping quality
+        :param map_quality: value of mapping quality
+        :return:
+        """
         c_q = min(map_quality, MAP_QUALITY_CAP)
         color = MAX_COLOR_VALUE * c_q / MAP_QUALITY_CAP
         return color
 
     @staticmethod
     def get_strand_color(is_rev):
+        """
+        Get color for forward and reverse reads
+        :param is_rev: True if read is reversed
+        :return:
+        """
         if is_rev is True:
             return 240
         else:
@@ -51,6 +96,11 @@ class imageChannels:
 
     @staticmethod
     def get_match_ref_color(is_match):
+        """
+        Get color for base matching to reference
+        :param is_match: If true, base matches to reference
+        :return:
+        """
         if is_match is True:
             return MAX_COLOR_VALUE * 0.2
         else:
@@ -58,6 +108,11 @@ class imageChannels:
 
     @staticmethod
     def get_alt_support_color(is_in_support):
+        """
+        ***NOT USED YET***
+        :param is_in_support:
+        :return:
+        """
         if is_in_support is True:
             return MAX_COLOR_VALUE * 1.0
         else:
@@ -65,28 +120,44 @@ class imageChannels:
 
     @staticmethod
     def get_empty_test_channels():
-        return [0, 0, 0, 0, 0]
+        """
+        Get empty channel values
+        :return:
+        """
+        return [0, 0, 0, 0, 0, 0]
 
     def get_channels_test(self):
+        """
+        Get a bases's channel construction
+        :return: [color spectrum of channels based on base attributes]
+        """
         base_color = self.get_base_color(self.pileup_base)
         base_quality_color = imageChannels.get_base_quality_color(self.base_qual)
         map_quality_color = imageChannels.get_map_quality_color(self.map_qual)
         strand_color = imageChannels.get_strand_color(self.is_rev)
         match_color = imageChannels.get_match_ref_color(self.is_match)
+        get_support_color = imageChannels.get_alt_support_color(self.is_supporting)
 
-        return [base_color, base_quality_color, map_quality_color, strand_color, match_color]
+        return [base_color, base_quality_color, map_quality_color, strand_color, match_color, get_support_color]
 
     @staticmethod
     def get_channels_for_ref_test(base):
+        """
+        Get a reference bases's channel construction
+        :param base: Reference base
+        :return: [color spectrum of channels based on some default values]
+        """
         base_color = imageChannels.get_base_color(base)
         base_quality_color = imageChannels.get_base_quality_color(60)
         map_quality_color = imageChannels.get_map_quality_color(60)
         strand_color = imageChannels.get_strand_color(is_rev=False)
         get_match_color = imageChannels.get_match_ref_color(is_match=True)
+        get_support_color = imageChannels.get_alt_support_color(is_in_support=True)
 
-        return [base_color, base_quality_color, map_quality_color, strand_color, get_match_color]
+        return [base_color, base_quality_color, map_quality_color, strand_color, get_match_color, get_support_color]
 
     # RGB image creator
+    # ---ONLY USED FOR TESTING--- #
     @staticmethod
     def get_empty_rgb_channels():
         return [0, 0, 0, 255]
@@ -117,7 +188,6 @@ class imageChannels:
             return [0, 255, 0, 255]
         else:
             return [255, 0, 255, 255]
-
 
 
 class PileupProcessor:
@@ -278,13 +348,20 @@ class PileupProcessor:
 
             print(''.join(read_list))
 
-    def get_row(self, read_id):
+    def get_row(self, read_id, poi, alt):
         read_list = {}
         read_insert_list = {}
+        is_supporting = False
         aligned_positions = sorted(self.read_dictionary[read_id].keys())
         for pos in aligned_positions:
             read_list[pos] = []
             read_list[pos].append(self.read_dictionary[read_id][pos])
+
+            # check if read is supporting base
+            if pos == poi and alt != '.' and alt is not None and alt != '':
+                if self.read_dictionary[read_id][pos][0] == alt:
+                    is_supporting = True
+
             if pos in self.insert_length_dictionary.keys() and self.insert_length_dictionary[pos] > 0:
                 read_insert_list[pos] = []
                 inserted_bases = 0
@@ -297,7 +374,7 @@ class PileupProcessor:
                                             self.read_dictionary[read_id][pos][3])
                     read_insert_list[pos].append(read_attribute_tuple)
 
-        return read_list, read_insert_list
+        return read_list, read_insert_list, is_supporting
 
     def get_reference_row_rgb(self, image_width):
         image_row = [imageChannels.get_empty_rgb_channels() for i in range(image_width)]
@@ -305,13 +382,13 @@ class PileupProcessor:
             image_row[i] = imageChannels.get_channels_for_ref_only_rgb(self.ref_sequence[i])
         return image_row
 
-    def create_image_rgb(self, query_pos, image_height, image_width, ref_band):
+    def create_image_rgb(self, query_pos, image_height, image_width, ref_band, alt):
         whole_image = []
         for i in range(ref_band):
             whole_image.append(self.get_reference_row_rgb(image_width))
 
         for read_id in self.reads_aligned_to_pos[query_pos]:
-            row_list, row_insert_list = self.get_row(read_id)
+            row_list, row_insert_list, is_supporting = self.get_row(read_id, query_pos, alt)
             image_row = [imageChannels.get_empty_rgb_channels() for i in range(image_width)]
 
             for position in sorted(row_list):
@@ -353,14 +430,17 @@ class PileupProcessor:
             whole_image.append(self.get_reference_row_test(image_width))
 
         for read_id in self.reads_aligned_to_pos[query_pos]:
-            row_list, row_insert_list = self.get_row(read_id)
+            row_list, row_insert_list, is_supporting = self.get_row(read_id, query_pos, alt)
+
             image_row = [imageChannels.get_empty_test_channels() for i in range(image_width)]
             filter_row = False
             for position in sorted(row_list):
                 if row_list[position][0][2] < MAP_QUALITY_FILTER:
                     filter_row = True
                     break
-                imagechannels_object = imageChannels(row_list[position][0], self.reference_base_projection[position])
+                imagechannels_object = imageChannels(row_list[position][0], self.reference_base_projection[position],
+                                                     is_supporting)
+
                 if self.genomic_position_projection[position] < image_width:
                     image_row[self.genomic_position_projection[position]] = imagechannels_object.get_channels_test()
 
@@ -370,7 +450,7 @@ class PileupProcessor:
                         for base_idx in range(len(bases[0])):
                             insert_ref += 1
                             attribute_tuple = (bases[0][base_idx], bases[1][base_idx], bases[2], bases[3])
-                            imagechannels_object = imageChannels(attribute_tuple, '*')
+                            imagechannels_object = imageChannels(attribute_tuple, '*', is_supporting)
                             if self.genomic_position_projection[position] + insert_ref < image_width:
                                 image_row[self.genomic_position_projection[position] + insert_ref] = \
                                     imagechannels_object.get_channels_test()

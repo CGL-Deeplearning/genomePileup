@@ -1,3 +1,9 @@
+"""
+Implemented by: Kishwar Shafin
+Date: 02/01/2018
+"""
+
+
 import pysam
 import os
 import sys
@@ -61,6 +67,20 @@ def chunk_it(seq, num):
 
     return out
 
+def get_alts_in_hom_pileup(pileup_str, ref_base):
+    """
+    Return possible alts in homozygous cases.
+    :param pileup_str: Pileup of a homozygous base.
+    :param ref_base: Reference base of that position.
+    :return:
+    """
+    alts = {'A':0, 'C':0, 'G':0, 'T':0}
+    for base in pileup_str:
+        if base != ref_base and base in alts.keys():
+            alts[base] += 1
+
+    return max(alts, key=alts.get), alts[max(alts, key=alts.get)]
+
 
 def get_odds_for_hom(total_hom, total_het, total_homalt):
     """
@@ -114,8 +134,19 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
 
             # if genotype is SNP then generate image
             if rec.genotype_class == 'SNP':
+                alt = '.'
+                if rec.type == 'Hom':
+                    pileup_str = bam_handler.get_pileup_of_a_site(contig, rec.pos-1).split(' ')[1]
+                    ref_at_pos = ref_handler.get_ref_of_region(contig, ":" + str(rec.pos) + "-" + str(rec.pos))
+                    alt, mismatches = get_alts_in_hom_pileup(pileup_str, ref_at_pos)
+                    if mismatches == 0:
+                        continue
+
                 if rec.type == 'Hom' and numpy.random.uniform(0, 1) > odds_of_generating_hom_case:
                     continue
+                elif rec.type == 'Hom':
+                    rec.alt = alt
+
                 total_generated_hom += 1 if rec.type == 'Hom' else 0
                 total_generated_het += 1 if rec.type == 'Het' else 0
                 total_generated_hom_alt += 1 if rec.type == 'Hom_alt' else 0

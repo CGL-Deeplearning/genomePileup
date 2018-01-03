@@ -1,6 +1,6 @@
 """
 Implemented by: Kishwar Shafin
-Date: 29/12/2017
+Date: 02/01/2018
 """
 
 import pysam
@@ -13,7 +13,7 @@ VCFFileProcessor processes a VCF file and creates a dictionary.
 In the dictionary at each position we get a list of VariantRecord objects. Each describing a variant recorded in that
 position.
 
-- populate_dictionary() is called to populate the dictionay
+- populate_dictionary() is called to populate the dictionary
 - get_variant_dictionary() is called to get the dictionary
 """
 
