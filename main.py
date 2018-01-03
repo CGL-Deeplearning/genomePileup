@@ -157,7 +157,7 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
                 pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos-1,
                                                                    rec.type, rec.alt)
                 # create the image
-                image_array, array_shape = pileup_object.create_image_test(pos-1, image_height=200, image_width=300,
+                image_array, array_shape = pileup_object.create_image_test(pos-1, image_height=299, image_width=299,
                                                                            ref_band=5, alt=rec.alt)
                 # file name for the image and save the image
                 file_name = contig + "_" + str(rec.pos)
