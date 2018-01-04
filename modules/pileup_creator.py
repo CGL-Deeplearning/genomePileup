@@ -12,7 +12,7 @@ from scipy import misc
 """
 This script creates pileup images given a vcf record, bam alignment file and reference fasta file.
 
-imageChannels: imageChannels class handles how many channels to create for each base and how
+imageChannels: Handles how many channels to create for each base and their structure
 
 """
 
@@ -191,7 +191,19 @@ class imageChannels:
 
 
 class PileupProcessor:
+    """
+    Processes a pileup around a positoin
+    """
     def __init__(self, ref_object, pileupcolumns, contig, pos, genotype, alt):
+        """
+        Initialize PileupProcessor object with required dictionaries
+        :param ref_object: pysam FastaFile object that contains the reference
+        :param pileupcolumns: pysam AlignmentFIle.pileup object that contains reads of a position
+        :param contig: Contig (ex chr3)
+        :param pos: Position in contig
+        :param genotype: Genotype
+        :param alt: Alternate allele
+        """
         self.ref_object = ref_object
         self.pileupcolumns = pileupcolumns
         self.contig = contig
@@ -217,23 +229,39 @@ class PileupProcessor:
         self.project_genomic_positions()
 
     def project_genomic_positions(self):
+        """
+        Generate reference sequence with inserts based on two dictionaries
+        :return:
+        """
+        # get the reference sequence
         ref_seq = self.ref_object.get_ref_of_region(self.contig,
                                                     ":"+str(self.leftmost_genomic_position+1)+ "-"
                                                     + str(self.rightmost_genomic_position+1))
         ref_seq_with_insert = ''
         idx = 0
         for i in range(self.leftmost_genomic_position, self.rightmost_genomic_position+1):
+            # projection of genomic position
             self.genomic_position_projection[i] = idx
+            # get reference of that position
             self.reference_base_projection[i] = ref_seq[i-self.leftmost_genomic_position]
             ref_seq_with_insert += ref_seq[i-self.leftmost_genomic_position]
             idx += 1
+            # if genomic position has insert
             if i in self.insert_length_dictionary:
+                # append inserted characters to the reference
                 ref_seq_with_insert += (self.insert_length_dictionary[i] * '*')
                 idx += self.insert_length_dictionary[i]
+        # set the reference sequence
         self.ref_sequence = ref_seq_with_insert
+
+        # return index
         return idx
 
     def length_of_region(self):
+        """
+        Return the length of the sequence from left to rightmost genomic position.
+        :return:
+        """
         length = 0
         for i in range(self.leftmost_genomic_position, self.rightmost_genomic_position):
             length += 1
@@ -242,6 +270,13 @@ class PileupProcessor:
         return length
 
     def initialize_dictionaries(self, genomic_position, read_id, is_insert):
+        """
+        Initialize all the dictionaries for a specific position
+        :param genomic_position: Genomic position of interest
+        :param read_id: Read id for which dictionaries should be initialized
+        :param is_insert: If the position is an insert
+        :return:
+        """
         if self.leftmost_genomic_position < 0 or genomic_position < self.leftmost_genomic_position:
             self.leftmost_genomic_position = genomic_position
         if self.rightmost_genomic_position < 0 or genomic_position > self.rightmost_genomic_position:
@@ -262,6 +297,17 @@ class PileupProcessor:
                 self.read_insert_dictionary[read_id][genomic_position] =''
 
     def save_info_of_a_position(self, genomic_position, read_id, base, base_qual, map_qual, is_rev, is_in):
+        """
+        Given the attributes of a base at a position
+        :param genomic_position: Genomic position
+        :param read_id: Read id of a read
+        :param base: Base at the position
+        :param base_qual: Base quality
+        :param map_qual: Map quality
+        :param is_rev: If read is reversed
+        :param is_in:
+        :return:
+        """
         self.initialize_dictionaries(genomic_position, read_id, is_in)
 
         if is_in is False:
