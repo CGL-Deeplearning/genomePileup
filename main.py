@@ -132,7 +132,7 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
     for pos in vcf_dict.keys():
         for rec in vcf_dict[pos]:
             if rec.genotype_class == 'DEL' or rec.genotype_class == 'IN':
-                print(rec, end='\t')
+                # print(rec, end='\t')
                 # get pileup columns from bam file
                 pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos - 1)
                 # create the pileup processor object
@@ -144,11 +144,11 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
 
                 # file_name = contig + "_" + str(rec.pos)
                 # img.save(output_dir+file_name+".png")
-                print(support, not_support)
+                # print(support, not_support)
                 if support == 0:
                     print('Support 0 encountered')
                     print(rec)
-                    exit()
+                    # exit()
             else:
                 continue
             # if genotype is SNP then generate image
