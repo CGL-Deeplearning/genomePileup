@@ -131,7 +131,7 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
 
     for pos in vcf_dict.keys():
         for rec in vcf_dict[pos]:
-            if rec.genotype_class == 'DEL':
+            if rec.genotype_class == 'DEL' or rec.genotype_class == 'IN':
                 print(rec, end='\t')
                 # get pileup columns from bam file
                 pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos - 1)
