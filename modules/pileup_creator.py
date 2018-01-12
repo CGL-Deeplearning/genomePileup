@@ -119,14 +119,14 @@ class imageChannels:
             return MAX_COLOR_VALUE * 0.6
 
     @staticmethod
-    def get_empty_test_channels():
+    def get_empty_channels():
         """
         Get empty channel values
         :return:
         """
         return [0, 0, 0, 0, 0, 0]
 
-    def get_channels_test(self):
+    def get_channels(self):
         """
         Get a bases's channel construction
         :return: [color spectrum of channels based on base attributes]
@@ -141,7 +141,7 @@ class imageChannels:
         return [base_color, base_quality_color, map_quality_color, strand_color, match_color, get_support_color]
 
     @staticmethod
-    def get_channels_for_ref_test(base):
+    def get_channels_for_ref(base):
         """
         Get a reference bases's channel construction
         :param base: Reference base
@@ -162,32 +162,43 @@ class imageChannels:
     def get_empty_rgb_channels():
         return [0, 0, 0, 255]
 
-    def get_channels_only_rgb(self):
-        if self.ref_base == self.pileup_base:
-            return [255, 255, 255, 255]
-        elif self.pileup_base == 'A':
-            return [255, 0, 0, 255]
-        elif self.pileup_base == 'C':
-            return [255, 255, 0, 255]
-        elif self.pileup_base == 'T':
-            return [0, 0, 255, 255]
-        elif self.pileup_base == 'G':
-            return [0, 255, 0, 255]
+    @staticmethod
+    def get_color_for_base_rgb(ref, base):
+        if ref == base and ref != '*':
+            return 255, 255, 255
+        elif base == 'A':
+            return 255, 0, 0
+        elif base == 'C':
+            return 255, 255, 0
+        elif base == 'T':
+            return 0, 0, 255
+        elif base == 'G':
+            return 0, 255, 0
         else:
-            return [255, 0, 255, 255]
+            return 255, 0, 255
+
+    def get_channels_only_rgb(self):
+        base_color = self.get_base_color(self.pileup_base)
+        base_quality_color = imageChannels.get_base_quality_color(self.base_qual)
+        map_quality_color = imageChannels.get_map_quality_color(self.map_qual)
+        strand_color = imageChannels.get_strand_color(self.is_rev)
+        match_color = imageChannels.get_match_ref_color(self.is_match)
+        support_color = imageChannels.get_alt_support_color(self.is_supporting)
+        r, g, b = self.get_color_for_base_rgb(self.ref_base, self.pileup_base)
+
+        return [r, g, b, support_color]
 
     @staticmethod
     def get_channels_for_ref_only_rgb(base):
-        if base == 'A':
-            return [255, 0, 0, 255]
-        elif base == 'C':
-            return [255, 255, 0, 255]
-        elif base == 'T':
-            return [0, 0, 255, 255]
-        elif base == 'G':
-            return [0, 255, 0, 255]
-        else:
-            return [255, 0, 255, 255]
+        base_color = imageChannels.get_base_color(base)
+        base_quality_color = imageChannels.get_base_quality_color(60)
+        map_quality_color = imageChannels.get_map_quality_color(60)
+        strand_color = imageChannels.get_strand_color(is_rev=False)
+        get_match_color = imageChannels.get_match_ref_color(is_match=True)
+        r, g, b = imageChannels.get_color_for_base_rgb('', base)
+        support_color = imageChannels.get_alt_support_color(is_in_support=True)
+
+        return [r, g, b, support_color]
 
 
 class PileupProcessor:
@@ -351,7 +362,6 @@ class PileupProcessor:
         pileupArray2d = pileup_array.reshape((pileup_array.shape[0], -1))
         misc.imsave(save_dir + file_name + ".png", pileupArray2d, format="PNG")
 
-
     def process_pileup(self):
         for pileupcolumn in self.pileupcolumns:
             self.position_list.append(pileupcolumn.pos)
@@ -394,19 +404,30 @@ class PileupProcessor:
 
             print(''.join(read_list))
 
-    def get_row(self, read_id, poi, alt):
+    def check_for_support(self, read_id, ref, alt, poi):
+        genomic_start_position = poi
+        genomic_end_position = poi + len(ref)
+
+        allele = ''
+        for pos in range(genomic_start_position, genomic_end_position):
+            if pos in self.read_dictionary[read_id]:
+                allele += self.read_dictionary[read_id][pos][0]
+            if read_id in self.read_insert_dictionary and pos in self.read_insert_dictionary[read_id]:
+                allele += self.read_insert_dictionary[read_id][pos][0]
+        allele = allele.replace('*', '')
+        if allele == alt:
+            return True
+        return False
+
+    def get_row(self, read_id, poi, ref, alt):
         read_list = {}
         read_insert_list = {}
-        is_supporting = False
+        is_supporting = self.check_for_support(read_id, ref, alt, poi)
+
         aligned_positions = sorted(self.read_dictionary[read_id].keys())
         for pos in aligned_positions:
             read_list[pos] = []
             read_list[pos].append(self.read_dictionary[read_id][pos])
-
-            # check if read is supporting base
-            if pos == poi and alt != '.' and alt is not None and alt != '':
-                if self.read_dictionary[read_id][pos][0] == alt:
-                    is_supporting = True
 
             if pos in self.insert_length_dictionary.keys() and self.insert_length_dictionary[pos] > 0:
                 read_insert_list[pos] = []
@@ -428,17 +449,23 @@ class PileupProcessor:
             image_row[i] = imageChannels.get_channels_for_ref_only_rgb(self.ref_sequence[i])
         return image_row
 
-    def create_image_rgb(self, query_pos, image_height, image_width, ref_band, alt):
+    def create_image_rgb(self, query_pos, image_height, image_width, ref_band, ref, alt):
+        in_support = 0
+        not_in_support = 0
         whole_image = []
         for i in range(ref_band):
             whole_image.append(self.get_reference_row_rgb(image_width))
 
         for read_id in self.reads_aligned_to_pos[query_pos]:
-            row_list, row_insert_list, is_supporting = self.get_row(read_id, query_pos, alt)
+            row_list, row_insert_list, is_supporting = self.get_row(read_id, query_pos, ref, alt)
+            in_support = in_support + 1 if is_supporting is True else in_support
+            not_in_support = not_in_support + 1 if is_supporting is False else not_in_support
+
             image_row = [imageChannels.get_empty_rgb_channels() for i in range(image_width)]
 
             for position in sorted(row_list):
-                imagechannels_object = imageChannels(row_list[position][0], self.reference_base_projection[position])
+                imagechannels_object = imageChannels(row_list[position][0], self.reference_base_projection[position],
+                                                     is_supporting)
                 if self.genomic_position_projection[position] < image_width:
                     image_row[self.genomic_position_projection[position]] = imagechannels_object.get_channels_only_rgb()
 
@@ -448,7 +475,7 @@ class PileupProcessor:
                         for base_idx in range(len(bases[0])):
                             insert_ref += 1
                             attribute_tuple = (bases[0][base_idx], bases[1][base_idx], bases[2], bases[3])
-                            imagechannels_object = imageChannels(attribute_tuple, '*')
+                            imagechannels_object = imageChannels(attribute_tuple, '*', is_supporting)
                             if self.genomic_position_projection[position] + insert_ref < image_width:
                                 image_row[self.genomic_position_projection[position] + insert_ref] = \
                                     imagechannels_object.get_channels_only_rgb()
@@ -461,24 +488,31 @@ class PileupProcessor:
 
         image_array = np.array(whole_image).astype(np.uint8)
         img = Image.fromarray(image_array)
-        return img
+        return img, in_support, not_in_support
 
     # TEST FIVE CHANNELS
-    def get_reference_row_test(self, image_width):
-        image_row = [imageChannels.get_empty_test_channels() for i in range(image_width)]
+    def get_reference_row(self, image_width):
+        image_row = [imageChannels.get_empty_channels() for i in range(image_width)]
         for i in range(0, min(len(self.ref_sequence), image_width)):
-            image_row[i] = imageChannels.get_channels_for_ref_test(self.ref_sequence[i])
+            image_row[i] = imageChannels.get_channels_for_ref(self.ref_sequence[i])
         return image_row
 
-    def create_image_test(self, query_pos, image_height, image_width, ref_band, alt):
+    @staticmethod
+    def add_empty_rows(image, empty_rows_to_add, image_width):
+        for i in range(empty_rows_to_add):
+            image.append([imageChannels.get_empty_channels() for i in range(image_width)])
+        return image
+
+    def create_image(self, query_pos, image_height, image_width, ref_band, ref, alt):
         whole_image = []
         for i in range(ref_band):
-            whole_image.append(self.get_reference_row_test(image_width))
+            whole_image.append(self.get_reference_row(image_width))
 
         for read_id in self.reads_aligned_to_pos[query_pos]:
-            row_list, row_insert_list, is_supporting = self.get_row(read_id, query_pos, alt)
+            row_list, row_insert_list, is_supporting = self.get_row(read_id, query_pos, ref, alt)
 
-            image_row = [imageChannels.get_empty_test_channels() for i in range(image_width)]
+            image_row = [imageChannels.get_empty_channels() for i in range(image_width)]
+
             filter_row = False
             for position in sorted(row_list):
                 if row_list[position][0][2] < MAP_QUALITY_FILTER:
@@ -488,7 +522,7 @@ class PileupProcessor:
                                                      is_supporting)
 
                 if self.genomic_position_projection[position] < image_width:
-                    image_row[self.genomic_position_projection[position]] = imagechannels_object.get_channels_test()
+                    image_row[self.genomic_position_projection[position]] = imagechannels_object.get_channels()
 
                 if position in row_insert_list.keys():
                     insert_ref = 0
@@ -499,13 +533,12 @@ class PileupProcessor:
                             imagechannels_object = imageChannels(attribute_tuple, '*', is_supporting)
                             if self.genomic_position_projection[position] + insert_ref < image_width:
                                 image_row[self.genomic_position_projection[position] + insert_ref] = \
-                                    imagechannels_object.get_channels_test()
+                                    imagechannels_object.get_channels()
+
             if filter_row is False and len(whole_image) < image_height:
                 whole_image.append(image_row)
 
-        empty_rows_to_add = image_height - len(whole_image)
-        for i in range(empty_rows_to_add):
-            whole_image.append([imageChannels.get_empty_test_channels() for i in range(image_width)])
+        whole_image = self.add_empty_rows(whole_image, image_height - len(whole_image), image_width)
 
         image_array = np.array(whole_image).astype(np.uint8)
         return image_array, image_array.shape
