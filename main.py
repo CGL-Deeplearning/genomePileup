@@ -138,7 +138,7 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
             #     continue
             if rec.genotype_class == 'DEL' and rec.type == 'Hom_alt':
                 print(rec)
-            elif rec.genotype_class == 'IN' and rec.type == 'Hom_alt':
+            if rec.genotype_class == 'IN' and rec.type == 'Hom_alt':
                 if len(rec.ref) > 1:
                     print(rec)
 
