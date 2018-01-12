@@ -146,7 +146,9 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
             if rec.genotype_class == 'DEL':
                 del_there = True
         if in_there is True and del_there is True:
-            print(pos, vcf_dict[pos])
+            print(contig, pos)
+            for rec in vcf_dict[pos]:
+                print(rec)
 
     #         if True:
     #
