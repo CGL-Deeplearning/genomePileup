@@ -131,7 +131,42 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
 
     for pos in vcf_dict.keys():
         for rec in vcf_dict[pos]:
+            # if rec.genotype_class == 'DEL':
+            #     # get pileup columns from bam file
+            #     pileup_columns = bam_handler.get_pileup_of_a_site(contig, rec.pos-1)
+            # else:
+            #     continue
 
+            if rec.genotype_class == 'IN' and rec.type=='HOM':
+                print(rec)
+                if len(rec.ref) > 1:
+                    print(rec)
+                    rec.alt = rec.alt[:-len(rec.ref)+1]
+                    print(rec)
+            else:
+                continue
+
+            if True:
+
+                sys.stderr.write(str(rec)+"\n")
+                print(rec, end='\t')
+                # get pileup columns from bam file
+                pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos - 1)
+                # create the pileup processor object
+                pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos - 1,
+                                                                       rec.type, rec.alt)
+                # create the image
+                rgb_image, support_count, unsupport_count = pileup_object.create_image_rgb(pos - 1, image_height=299, image_width=299,
+                                                                           ref_band=5, alt=rec.alt)
+
+                print(support_count, unsupport_count)
+                file_name = contig + "_" + str(rec.pos)
+                rgb_image.save(output_dir + file_name + '.png')
+
+                if support_count == 0:
+                    sys.stderr.write('SUPPORT COUNT 0 ENCOUNTERED')
+                    print('Culprit:\n', rec)
+                    exit()
             # if genotype is SNP then generate image
             if rec.genotype_class == 'SNP':
                 alt = '.'
@@ -174,6 +209,7 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
                     sys.stderr.write(str(total) + ' variants processed in region ' + str(contig) + str(site) + "\n")
 
     # print some stats
+    exit()
     sys.stderr.write('IN REGION: ' + str(contig) + ' ' + site + '\n')
     sys.stderr.write('TOTAL IN RECORDS:\n' + 'HOM\t' + 'HET\t' + 'HOM_ALT\t' + '\n')
     sys.stderr.write(str(total_hom) + '\t' + str(total_het) + '\t' + str(total_homalt) + '\n')

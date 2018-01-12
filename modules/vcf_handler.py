@@ -327,6 +327,7 @@ class VCFFileProcessor:
 
         # Filter the records
         filtered_records = self._get_filtered_records(hom_filter)
+
         # Generate dictionary
         self._generate_dictionary_from_records(filtered_records)
 

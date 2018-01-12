@@ -63,7 +63,9 @@ class BamProcessor:
                     pileup_str += pileupread.alignment.query_sequence[pileupread.query_position]
                 if pileupread.is_del:
                     pileup_str += '*'
+                print(pileup_str, pileupread.indel)
 
+        print(pileup_str)
+        exit()
         # return pileup string
         return pileup_str
-
