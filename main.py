@@ -130,7 +130,10 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
     total_generated_hom, total_generated_het, total_generated_hom_alt = 0, 0, 0
 
     for pos in vcf_dict.keys():
+        in_there = False
+        del_there = False
         for rec in vcf_dict[pos]:
+
             # if rec.genotype_class == 'DEL':
             #     # get pileup columns from bam file
             #     pileup_columns = bam_handler.get_pileup_of_a_site(contig, rec.pos-1)
@@ -138,9 +141,12 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
             #     continue
             # if rec.genotype_class == 'DEL' and rec.type == 'Hom_alt':
             #     print(rec)
-            if rec.genotype_class == 'IN' and rec.type == 'Hom_alt':
-                if len(rec.ref) > 1:
-                    print(rec)
+            if rec.genotype_class == 'IN':
+                in_there = True
+            if rec.genotype_class == 'DEL':
+                del_there = True
+        if in_there is True and del_there is True:
+            print(pos, vcf_dict[pos])
 
     #         if True:
     #
