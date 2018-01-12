@@ -137,7 +137,6 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
             # else:
             #     continue
             if rec.genotype_class == 'IN' and rec.type == 'Hom_alt':
-                print(rec)
                 if len(rec.ref) > 1:
                     print(rec)
                     rec.alt = rec.alt[:-len(rec.ref)+1]
