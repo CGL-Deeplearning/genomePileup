@@ -136,10 +136,10 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
             #     pileup_columns = bam_handler.get_pileup_of_a_site(contig, rec.pos-1)
             # else:
             #     continue
+            if rec.genotype_class == 'DEL' and rec.type == 'Hom_alt':
+                print(rec)
             if rec.genotype_class == 'IN' and rec.type == 'Hom_alt':
                 if len(rec.ref) > 1:
-                    print(rec)
-                    rec.alt = rec.alt[:-len(rec.ref)+1]
                     print(rec)
             else:
                 continue
