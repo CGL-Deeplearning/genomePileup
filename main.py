@@ -140,7 +140,7 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
                                                                        rec.type, rec.alt)
 
                 img, support, not_support = pileup_object.create_image_rgb(pos - 1, image_height=299, image_width=299,
-                                                     ref_band=5, alt=rec.alt, ref=rec.ref)
+                                                                           ref_band=5, alt=rec.alt, ref=rec.ref)
 
                 # file_name = contig + "_" + str(rec.pos)
                 # img.save(output_dir+file_name+".png")
