@@ -138,83 +138,81 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
             #     continue
             if rec.genotype_class == 'DEL' and rec.type == 'Hom_alt':
                 print(rec)
-            if rec.genotype_class == 'IN' and rec.type == 'Hom_alt':
+            elif rec.genotype_class == 'IN' and rec.type == 'Hom_alt':
                 if len(rec.ref) > 1:
                     print(rec)
-            else:
-                continue
 
-            if True:
-
-                sys.stderr.write(str(rec)+"\n")
-                print(rec, end='\t')
-                # get pileup columns from bam file
-                pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos - 1)
-                # create the pileup processor object
-                pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos - 1,
-                                                                       rec.type, rec.alt)
-                # create the image
-                rgb_image, support_count, unsupport_count = pileup_object.create_image_rgb(pos - 1, image_height=299, image_width=299,
-                                                                           ref_band=5, alt=rec.alt)
-
-                print(support_count, unsupport_count)
-                file_name = contig + "_" + str(rec.pos)
-                rgb_image.save(output_dir + file_name + '.png')
-
-                if support_count == 0:
-                    sys.stderr.write('SUPPORT COUNT 0 ENCOUNTERED')
-                    print('Culprit:\n', rec)
-                    exit()
-            # if genotype is SNP then generate image
-            if rec.genotype_class == 'SNP':
-                alt = '.'
-                if rec.type == 'Hom':
-                    pileup_str = bam_handler.get_pileup_of_a_site(contig, rec.pos-1).split(' ')[1]
-                    ref_at_pos = ref_handler.get_ref_of_region(contig, ":" + str(rec.pos) + "-" + str(rec.pos))
-                    alt, mismatches = get_alts_in_hom_pileup(pileup_str, ref_at_pos)
-                    if mismatches == 0:
-                        continue
-
-                if rec.type == 'Hom' and numpy.random.uniform(0, 1) > odds_of_generating_hom_case:
-                    continue
-                elif rec.type == 'Hom':
-                    rec.alt = alt
-
-                total_generated_hom += 1 if rec.type == 'Hom' else 0
-                total_generated_het += 1 if rec.type == 'Het' else 0
-                total_generated_hom_alt += 1 if rec.type == 'Hom_alt' else 0
-
-                # get pileup columns from bam file
-                pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos-1)
-                # create the pileup processor object
-                pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos-1,
-                                                                   rec.type, rec.alt)
-                # create the image
-                image_array, array_shape = pileup_object.create_image_test(pos-1, image_height=299, image_width=299,
-                                                                           ref_band=5, alt=rec.alt)
-                # file name for the image and save the image
-                file_name = contig + "_" + str(rec.pos)
-                pileup_object.save_image_as_png(image_array, output_dir, file_name)
-
-                # label of the image and save the image
-                label = get_label(rec.type)
-                smry.write(os.path.abspath(output_dir + file_name) + ".png," + str(label) + ',' + ','.join(
-                    map(str, array_shape)) + '\n')
-
-                # report progress
-                if (total_generated_hom_alt+total_generated_hom+total_generated_het) % 100 == 0:
-                    total = (total_generated_hom_alt+total_generated_hom+total_generated_het)
-                    sys.stderr.write(str(total) + ' variants processed in region ' + str(contig) + str(site) + "\n")
-
-    # print some stats
-    exit()
-    sys.stderr.write('IN REGION: ' + str(contig) + ' ' + site + '\n')
-    sys.stderr.write('TOTAL IN RECORDS:\n' + 'HOM\t' + 'HET\t' + 'HOM_ALT\t' + '\n')
-    sys.stderr.write(str(total_hom) + '\t' + str(total_het) + '\t' + str(total_homalt) + '\n')
-
-    sys.stderr.write('TOTAL GENERATED:\n' + 'HOM\t' + 'HET\t' + 'HOM_ALT' + '\n')
-    sys.stderr.write(str(total_generated_hom) + '\t' + str(total_generated_het) + '\t'
-                     + str(total_generated_hom_alt) + '\n')
+    #         if True:
+    #
+    #             sys.stderr.write(str(rec)+"\n")
+    #             print(rec, end='\t')
+    #             # get pileup columns from bam file
+    #             pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos - 1)
+    #             # create the pileup processor object
+    #             pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos - 1,
+    #                                                                    rec.type, rec.alt)
+    #             # create the image
+    #             rgb_image, support_count, unsupport_count = pileup_object.create_image_rgb(pos - 1, image_height=299, image_width=299,
+    #                                                                        ref_band=5, alt=rec.alt)
+    #
+    #             print(support_count, unsupport_count)
+    #             file_name = contig + "_" + str(rec.pos)
+    #             rgb_image.save(output_dir + file_name + '.png')
+    #
+    #             if support_count == 0:
+    #                 sys.stderr.write('SUPPORT COUNT 0 ENCOUNTERED')
+    #                 print('Culprit:\n', rec)
+    #                 exit()
+    #         # if genotype is SNP then generate image
+    #         if rec.genotype_class == 'SNP':
+    #             alt = '.'
+    #             if rec.type == 'Hom':
+    #                 pileup_str = bam_handler.get_pileup_of_a_site(contig, rec.pos-1).split(' ')[1]
+    #                 ref_at_pos = ref_handler.get_ref_of_region(contig, ":" + str(rec.pos) + "-" + str(rec.pos))
+    #                 alt, mismatches = get_alts_in_hom_pileup(pileup_str, ref_at_pos)
+    #                 if mismatches == 0:
+    #                     continue
+    #
+    #             if rec.type == 'Hom' and numpy.random.uniform(0, 1) > odds_of_generating_hom_case:
+    #                 continue
+    #             elif rec.type == 'Hom':
+    #                 rec.alt = alt
+    #
+    #             total_generated_hom += 1 if rec.type == 'Hom' else 0
+    #             total_generated_het += 1 if rec.type == 'Het' else 0
+    #             total_generated_hom_alt += 1 if rec.type == 'Hom_alt' else 0
+    #
+    #             # get pileup columns from bam file
+    #             pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos-1)
+    #             # create the pileup processor object
+    #             pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos-1,
+    #                                                                rec.type, rec.alt)
+    #             # create the image
+    #             image_array, array_shape = pileup_object.create_image_test(pos-1, image_height=299, image_width=299,
+    #                                                                        ref_band=5, alt=rec.alt)
+    #             # file name for the image and save the image
+    #             file_name = contig + "_" + str(rec.pos)
+    #             pileup_object.save_image_as_png(image_array, output_dir, file_name)
+    #
+    #             # label of the image and save the image
+    #             label = get_label(rec.type)
+    #             smry.write(os.path.abspath(output_dir + file_name) + ".png," + str(label) + ',' + ','.join(
+    #                 map(str, array_shape)) + '\n')
+    #
+    #             # report progress
+    #             if (total_generated_hom_alt+total_generated_hom+total_generated_het) % 100 == 0:
+    #                 total = (total_generated_hom_alt+total_generated_hom+total_generated_het)
+    #                 sys.stderr.write(str(total) + ' variants processed in region ' + str(contig) + str(site) + "\n")
+    #
+    # # print some stats
+    # exit()
+    # sys.stderr.write('IN REGION: ' + str(contig) + ' ' + site + '\n')
+    # sys.stderr.write('TOTAL IN RECORDS:\n' + 'HOM\t' + 'HET\t' + 'HOM_ALT\t' + '\n')
+    # sys.stderr.write(str(total_hom) + '\t' + str(total_het) + '\t' + str(total_homalt) + '\n')
+    #
+    # sys.stderr.write('TOTAL GENERATED:\n' + 'HOM\t' + 'HET\t' + 'HOM_ALT' + '\n')
+    # sys.stderr.write(str(total_generated_hom) + '\t' + str(total_generated_het) + '\t'
+    #                  + str(total_generated_hom_alt) + '\n')
 
 
 def parallel_pileup_generator(contig, site, bam_file, ref_file, vcf_file, output_dir, threads):
