@@ -131,28 +131,29 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
 
     for pos in vcf_dict.keys():
         for rec in vcf_dict[pos]:
-            if rec.genotype_class == 'DEL' or rec.genotype_class == 'IN':
-                # print(rec, end='\t')
-                # get pileup columns from bam file
-                pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos - 1)
-                # create the pileup processor object
-                pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos - 1,
-                                                                       rec.type, rec.alt)
-
-                img, support, not_support = pileup_object.create_image_rgb(pos - 1, image_height=299, image_width=299,
-                                                                           ref_band=5, alt=rec.alt, ref=rec.ref)
-
-                # file_name = contig + "_" + str(rec.pos)
-                # img.save(output_dir+file_name+".png")
-                # print(support, not_support)
-                if support == 0:
-                    print('Support 0 encountered')
-                    print(rec)
-                    # exit()
-            else:
-                continue
+            # if rec.genotype_class == 'DEL': #or rec.genotype_class == 'IN':
+            #     print(rec)
+            #     # print(rec, end='\t')
+            #     # get pileup columns from bam file
+            #     pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos - 1)
+            #     # create the pileup processor object
+            #     pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos - 1,
+            #                                                            rec.type, rec.alt)
+            #
+            #     img, support, not_support = pileup_object.create_image_rgb(pos - 1, image_height=299, image_width=299,
+            #                                                                ref_band=5, alt=rec.alt, ref=rec.ref)
+            #
+            #     file_name = contig + "_" + str(rec.pos)
+            #     img.save(output_dir+file_name+".png")
+            #     # print(support, not_support)
+            #     if support == 0:
+            #         print('Support 0 encountered')
+            #         print(rec)
+            #         # exit()
+            # else:
+            #     continue
             # if genotype is SNP then generate image
-            if rec.genotype_class == 'SNP':
+            if rec.genotype_class == 'SNP' or rec.genotype_class == 'IN' or rec.genotype_class == 'DEL':
                 alt = '.'
                 if rec.type == 'Hom':
                     pileup_str = bam_handler.get_pileup_of_a_site(contig, rec.pos-1).split(' ')[1]
@@ -177,7 +178,7 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
                                                                    rec.type, rec.alt)
                 # create the image
                 image_array, array_shape = pileup_object.create_image(pos-1, image_height=299, image_width=299,
-                                                                      ref_band=5, alt=rec.alt)
+                                                                      ref_band=5, alt=rec.alt, ref=rec.ref)
                 # file name for the image and save the image
                 file_name = contig + "_" + str(rec.pos)
                 pileup_object.save_image_as_png(image_array, output_dir, file_name)
@@ -185,14 +186,13 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
                 # label of the image and save the image
                 label = get_label(rec.type)
                 smry.write(os.path.abspath(output_dir + file_name) + ".png," + str(label) + ',' + ','.join(
-                    map(str, array_shape)) + '\n')
+                    map(str, array_shape)) + ',' + str(rec.genotype_class) + '\n')
 
                 # report progress
                 if (total_generated_hom_alt+total_generated_hom+total_generated_het) % 100 == 0:
                     total = (total_generated_hom_alt+total_generated_hom+total_generated_het)
                     sys.stderr.write(str(total) + ' variants processed in region ' + str(contig) + str(site) + "\n")
 
-    exit()
     # print some stats
     sys.stderr.write('IN REGION: ' + str(contig) + ' ' + site + '\n')
     sys.stderr.write('TOTAL IN RECORDS:\n' + 'HOM\t' + 'HET\t' + 'HOM_ALT\t' + '\n')
