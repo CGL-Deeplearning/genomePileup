@@ -22,5 +22,5 @@ for i in ${chrs[@]};
     current_output_dir=$output_dir/'chr'$i/
     mkdir $current_output_dir
     echo "Starting chr" 'chr'$i
-    python3 main.py --bam $bam_file --ref $ref_file --contig 'chr'$i --bed $bed_file --output_dir $current_output_dir --max_threads $max_threads --parallel True 2>tmp/progress-$i.txt &
+    python3 main_bed.py --bam $bam_file --ref $ref_file --contig 'chr'$i --bed $bed_file --output_dir $current_output_dir --max_threads $max_threads --parallel True 2>tmp/progress-$i.txt &
     done
