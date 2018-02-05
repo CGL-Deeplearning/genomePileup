@@ -100,7 +100,50 @@ def generate_pileup(contig, site, bam_file, ref_file, bed_file, output_dir):
             map(str, array_shape)) + ',' + str(genotype) + '\n')
 
 
-def parallel_pileup_generator(contig, site, bam_file, ref_file, vcf_file, output_dir, threads):
+def generate_pileup_pl(contig, site, bam_file, ref_file, bed_records, output_dir):
+    """
+    Generate pileup images from a vcf file
+    :param contig: Which contig to fetch ("chr3")
+    :param site: Which site to fetch (":100000-200000")
+    :param bam_file: Path to the bam alignment file
+    :param ref_file: Path to the reference file
+    :param vcf_file: Path to the vcf file
+    :param output_dir: Output directory, where the image will be saved
+    :return:
+    """
+    # generate dictionary of the region
+    all_bed_records = bed_records
+
+    # create ref and bam files handler
+    ref_handler = modules.ref_handler.RefFileProcessor(ref_file)
+    bam_handler = modules.bam_handler_mpileup.BamProcessor(bam_file)
+
+    # create a summary file
+    smry = open(output_dir + "summary" + '_' + contig + site.replace(':', '_').replace('-', '_') + ".csv", 'w')
+
+    for rec in all_bed_records:
+        chr_name, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
+        pos = int(pos) + 1
+
+        # get pileup columns from bam file
+        pileup_columns = bam_handler.get_pileupcolumns_aligned_to_a_site(contig, pos)
+        # create the pileup processor object
+        pileup_object = modules.pileup_creator.PileupProcessor(ref_handler, pileup_columns, contig, pos, genotype, alt)
+
+        # create the image
+        image_array, array_shape = pileup_object.create_image(pos - 1, image_height=300, image_width=300, ref_band=5,
+                                                              alt=alt, ref=ref)
+        # file name for the image and save the image
+        file_name = contig + "_" + str(pos)
+        pileup_object.save_image_as_png(image_array, output_dir, file_name)
+
+        # label of the image and save the image
+        label = genotype
+        smry.write(os.path.abspath(output_dir + file_name) + ".png," + str(label) + ',' + ','.join(
+            map(str, array_shape)) + ',' + str(genotype) + '\n')
+
+
+def parallel_pileup_generator(contig, bam_file, ref_file, bed_file, output_dir, threads):
     """
     Generate pileup images from a vcf file using multithreading
     :param contig: Which contig to fetch ("chr3")
@@ -112,20 +155,24 @@ def parallel_pileup_generator(contig, site, bam_file, ref_file, vcf_file, output
     :param threads: Number of threads to use for generation
     :return:
     """
-    all_positions = []
+    all_positions = list()
+    bed_handler = modules.bed_handler.BedHandler(bed_file)
+    total_recs = len(bed_handler.all_bed_records)
+    segmented_list_len = total_recs/threads + 10
+    list_chunks = list()
+    for rec in bed_handler.all_bed_records:
+        chr_name, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
+        all_positions.append(int(pos))
+        if len(all_positions) >= segmented_list_len:
+            list_chunks.append(all_positions)
+            all_positions = list()
 
-    for rec in pysam.VariantFile(vcf_file).fetch(region=contig+site):
-        all_positions.append(rec.pos)
+    if len(all_positions) > 0:
+        list_chunks.append(all_positions)
+        all_positions = list()
 
-    all_positions = chunk_it(all_positions, threads)
-    starts = [all_positions[i][0] for i in range(len(all_positions))]
-    ends = [all_positions[i][-1] for i in range(len(all_positions))]
-    args = ()
-
-    for i in range(len(starts)):
-        args += ((starts[i], ends[i]),)
-        site = ":"+str(starts[i])+"-"+str(ends[i])
-        p = Process(target=generate_pileup, args=(contig, site, bam_file, ref_file, vcf_file, output_dir))
+    for i in range(threads):
+        p = Process(target=generate_pileup_pl, args=(contig, i, bam_file, ref_file, list_chunks[i], output_dir))
         p.start()
 
 
@@ -191,10 +238,9 @@ if __name__ == '__main__':
 
     if FLAGS.parallel:
         parallel_pileup_generator(contig=FLAGS.contig,
-                                  site=FLAGS.site,
                                   bam_file=FLAGS.bam,
                                   ref_file=FLAGS.ref,
-                                  vcf_file=FLAGS.vcf,
+                                  bed_file=FLAGS.bed,
                                   output_dir=FLAGS.output_dir,
                                   threads=FLAGS.max_threads)
     else:
