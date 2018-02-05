@@ -407,14 +407,14 @@ class PileupProcessor:
     def check_for_support(self, read_id, ref, alt, poi):
         genomic_start_position = poi
         genomic_end_position = poi + len(ref)
-
         allele = ''
         for pos in range(genomic_start_position, genomic_end_position):
             if pos in self.read_dictionary[read_id]:
                 allele += self.read_dictionary[read_id][pos][0]
-            if read_id in self.read_insert_dictionary and pos in self.read_insert_dictionary[read_id]:
+            if len(alt) > 1 and read_id in self.read_insert_dictionary and pos in self.read_insert_dictionary[read_id]:
                 allele += self.read_insert_dictionary[read_id][pos][0]
         allele = allele.replace('*', '')
+        alt = alt.replace('*', '')
         if allele == alt:
             return True
         return False

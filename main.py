@@ -67,6 +67,7 @@ def chunk_it(seq, num):
 
     return out
 
+
 def get_alts_in_hom_pileup(pileup_str, ref_base):
     """
     Return possible alts in homozygous cases.
@@ -153,7 +154,8 @@ def generate_pileup(contig, site, bam_file, ref_file, vcf_file, output_dir):
             # else:
             #     continue
             # if genotype is SNP then generate image
-            if rec.genotype_class == 'SNP' or rec.genotype_class == 'IN' or rec.genotype_class == 'DEL':
+            if rec.genotype_class == 'DEL':
+                print(rec)
                 alt = '.'
                 if rec.type == 'Hom':
                     pileup_str = bam_handler.get_pileup_of_a_site(contig, rec.pos-1).split(' ')[1]
