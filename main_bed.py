@@ -162,7 +162,7 @@ def parallel_pileup_generator(contig, bam_file, ref_file, bed_file, output_dir, 
     list_chunks = list()
     for rec in bed_handler.all_bed_records:
         chr_name, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
-        all_positions.append(int(pos))
+        all_positions.append(rec)
         if len(all_positions) >= segmented_list_len:
             list_chunks.append(all_positions)
             all_positions = list()
