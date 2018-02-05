@@ -172,7 +172,7 @@ def parallel_pileup_generator(contig, bam_file, ref_file, bed_file, output_dir, 
         all_positions = list()
 
     for i in range(threads):
-        p = Process(target=generate_pileup_pl, args=(contig, i, bam_file, ref_file, list_chunks[i], output_dir))
+        p = Process(target=generate_pileup_pl, args=(contig, str(i), bam_file, ref_file, list_chunks[i], output_dir))
         p.start()
 
 
