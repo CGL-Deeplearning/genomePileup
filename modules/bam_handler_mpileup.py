@@ -26,8 +26,6 @@ class BamProcessor:
         except:
             raise IOError("BAM FILE ERROR")
 
-
-
     def get_pileupcolumns_aligned_to_a_site(self, contig, pos):
         """
         Return a AlignmentFile.pileup object given a site

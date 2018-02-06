@@ -91,7 +91,7 @@ def generate_pileup(contig, site, bam_file, ref_file, bed_file, output_dir):
         image_array, array_shape = pileup_object.create_image(pos - 1, image_height=300, image_width=300, ref_band=5,
                                                               alt=alt, ref=ref)
         # file name for the image and save the image
-        file_name = contig + "_" + str(pos)
+        file_name = contig + "_" + str(pos) + "_" + str(alt) + "_" + str(genotype)
         pileup_object.save_image_as_png(image_array, output_dir, file_name)
 
         # label of the image and save the image
@@ -119,7 +119,7 @@ def generate_pileup_pl(contig, site, bam_file, ref_file, bed_records, output_dir
     bam_handler = modules.bam_handler_mpileup.BamProcessor(bam_file)
 
     # create a summary file
-    smry = open(output_dir + "summary" + '_' + contig + site.replace(':', '_').replace('-', '_') + ".csv", 'w')
+    smry = open(output_dir + "summary" + '_' + contig + '_' + site.replace(':', '_').replace('-', '_') + ".csv", 'w')
 
     for rec in all_bed_records:
         chr_name, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
@@ -134,7 +134,7 @@ def generate_pileup_pl(contig, site, bam_file, ref_file, bed_records, output_dir
         image_array, array_shape = pileup_object.create_image(pos - 1, image_height=300, image_width=300, ref_band=5,
                                                               alt=alt, ref=ref)
         # file name for the image and save the image
-        file_name = contig + "_" + str(pos)
+        file_name = contig + "_" + str(pos) + "_" + str(alt) + "_" + str(genotype)
         pileup_object.save_image_as_png(image_array, output_dir, file_name)
 
         # label of the image and save the image
