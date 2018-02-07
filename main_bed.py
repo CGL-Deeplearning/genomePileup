@@ -163,10 +163,11 @@ def parallel_pileup_generator(bam_file, ref_file, bed_file, output_dir, threads)
         list_chunks.append(all_positions)
 
     for i in range(len(list_chunks)):
+        print("Current chunk: ", i + 1, "/", len(list_chunks))
         p = Process(target=generate_pileup_pl, args=(bam_file, ref_file, list_chunks[i], output_dir, str(i)))
         p.start()
         while True:
-            if len(multiprocessing.active_children()) < thread:
+            if len(multiprocessing.active_children()) < threads:
                 break
 
 
