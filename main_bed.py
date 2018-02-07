@@ -1,14 +1,6 @@
-"""
-Implemented by: Kishwar Shafin
-Date: 02/01/2018
-"""
-
-
-import pysam
 import os
-import sys
-import numpy
 import argparse
+import multiprocessing
 from multiprocessing import Process
 
 import modules.bed_handler
@@ -54,7 +46,7 @@ def chunk_it(seq, num):
     return out
 
 
-def generate_pileup(contig, site, bam_file, ref_file, bed_file, output_dir):
+def generate_pileup(bam_file, ref_file, bed_file, output_dir):
     """
     Generate pileup images from a vcf file
     :param contig: Which contig to fetch ("chr3")
@@ -76,10 +68,11 @@ def generate_pileup(contig, site, bam_file, ref_file, bed_file, output_dir):
     bam_handler = modules.bam_handler_mpileup.BamProcessor(bam_file)
 
     # create a summary file
-    smry = open(output_dir + "summary" + '_' + contig + site.replace(':', '_').replace('-', '_') + ".csv", 'w')
+    smry = open(output_dir + "summary" + '_' + bed_file + ".csv", 'w')
 
     for rec in all_bed_records:
-        chr_name, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
+        print(rec)
+        contig, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
         pos = int(pos) + 1
 
         # get pileup columns from bam file
@@ -100,7 +93,7 @@ def generate_pileup(contig, site, bam_file, ref_file, bed_file, output_dir):
             map(str, array_shape)) + ',' + str(genotype) + '\n')
 
 
-def generate_pileup_pl(contig, site, bam_file, ref_file, bed_records, output_dir):
+def generate_pileup_pl(bam_file, ref_file, bed_records, output_dir, thread_no):
     """
     Generate pileup images from a vcf file
     :param contig: Which contig to fetch ("chr3")
@@ -119,10 +112,10 @@ def generate_pileup_pl(contig, site, bam_file, ref_file, bed_records, output_dir
     bam_handler = modules.bam_handler_mpileup.BamProcessor(bam_file)
 
     # create a summary file
-    smry = open(output_dir + "summary" + '_' + contig + '_' + site.replace(':', '_').replace('-', '_') + ".csv", 'w')
+    smry = open(output_dir + "summary" + '_' + str(thread_no) + ".csv", 'w')
 
     for rec in all_bed_records:
-        chr_name, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
+        contig, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
         pos = int(pos) + 1
 
         # get pileup columns from bam file
@@ -143,7 +136,7 @@ def generate_pileup_pl(contig, site, bam_file, ref_file, bed_records, output_dir
             map(str, array_shape)) + ',' + str(genotype) + '\n')
 
 
-def parallel_pileup_generator(contig, bam_file, ref_file, bed_file, output_dir, threads):
+def parallel_pileup_generator(bam_file, ref_file, bed_file, output_dir, threads):
     """
     Generate pileup images from a vcf file using multithreading
     :param contig: Which contig to fetch ("chr3")
@@ -157,11 +150,10 @@ def parallel_pileup_generator(contig, bam_file, ref_file, bed_file, output_dir, 
     """
     all_positions = list()
     bed_handler = modules.bed_handler.BedHandler(bed_file)
-    total_recs = len(bed_handler.all_bed_records)
-    segmented_list_len = total_recs/threads + 10
+    segmented_list_len = 10000
     list_chunks = list()
+
     for rec in bed_handler.all_bed_records:
-        chr_name, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
         all_positions.append(rec)
         if len(all_positions) >= segmented_list_len:
             list_chunks.append(all_positions)
@@ -169,11 +161,14 @@ def parallel_pileup_generator(contig, bam_file, ref_file, bed_file, output_dir, 
 
     if len(all_positions) > 0:
         list_chunks.append(all_positions)
-        all_positions = list()
 
-    for i in range(threads):
-        p = Process(target=generate_pileup_pl, args=(contig, str(i), bam_file, ref_file, list_chunks[i], output_dir))
+    for i in range(len(list_chunks)):
+        p = Process(target=generate_pileup_pl, args=(bam_file, ref_file, list_chunks[i], output_dir, str(i)))
         p.start()
+        while True:
+            if len(multiprocessing.active_children()) < thread:
+                break
+
 
 
 if __name__ == '__main__':
@@ -202,19 +197,6 @@ if __name__ == '__main__':
         help="Bed file containing labeled records."
     )
     parser.add_argument(
-        "--contig",
-        type=str,
-        default="chr3",
-        help="Contig to fetch. Ex: chr3"
-    )
-    parser.add_argument(
-        "--site",
-        type=str,
-        default="",
-        help="Site region. Ex: :100000-200000"
-    )
-
-    parser.add_argument(
         "--output_dir",
         type=str,
         default="output/",
@@ -237,16 +219,13 @@ if __name__ == '__main__':
     FLAGS.output_dir = handle_directory(FLAGS.output_dir)
 
     if FLAGS.parallel:
-        parallel_pileup_generator(contig=FLAGS.contig,
-                                  bam_file=FLAGS.bam,
+        parallel_pileup_generator(bam_file=FLAGS.bam,
                                   ref_file=FLAGS.ref,
                                   bed_file=FLAGS.bed,
                                   output_dir=FLAGS.output_dir,
                                   threads=FLAGS.max_threads)
     else:
-        generate_pileup(contig=FLAGS.contig,
-                        site=FLAGS.site,
-                        bam_file=FLAGS.bam,
+        generate_pileup(bam_file=FLAGS.bam,
                         ref_file=FLAGS.ref,
                         bed_file=FLAGS.bed,
                         output_dir=FLAGS.output_dir)
