@@ -65,7 +65,7 @@ class BedHandler:
         :param record: A bed file record
         :return:
         """
-        chr, pos_start, pos_end, ref, alt, genotype = record
+        chr, pos_start, pos_end, ref, alt, genotype = record[0:6]
 
         self._update_genotype_count(int(genotype))
 

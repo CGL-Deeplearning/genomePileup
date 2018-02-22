@@ -244,6 +244,9 @@ class PileupProcessor:
         Generate reference sequence with inserts based on two dictionaries
         :return:
         """
+        if self.leftmost_genomic_position < 0:
+            self.leftmost_genomic_position = 0
+
         # get the reference sequence
         ref_seq = self.ref_object.get_ref_of_region(self.contig,
                                                     ":"+str(self.leftmost_genomic_position+1)+ "-"

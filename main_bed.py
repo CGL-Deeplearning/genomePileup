@@ -68,11 +68,11 @@ def generate_pileup(bam_file, ref_file, bed_file, output_dir):
     bam_handler = modules.bam_handler_mpileup.BamProcessor(bam_file)
 
     # create a summary file
-    smry = open(output_dir + "summary" + '_' + bed_file + ".csv", 'w')
+    smry = open(output_dir + "summary" + '_' + bed_file.split('/')[-1] + ".csv", 'w')
 
     for rec in all_bed_records:
-        print(rec)
-        contig, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
+        contig, pos, end_pos, ref, alt, genotype, qual, filter, in_conf = rec.rstrip().split('\t')
+
         pos = int(pos) + 1
 
         # get pileup columns from bam file
@@ -90,7 +90,7 @@ def generate_pileup(bam_file, ref_file, bed_file, output_dir):
         # label of the image and save the image
         label = genotype
         smry.write(os.path.abspath(output_dir + file_name) + ".png," + str(label) + ',' + ','.join(
-            map(str, array_shape)) + ',' + str(genotype) + '\n')
+            map(str, array_shape)) + ',' + str(genotype) + "," + str(qual) + "," + str(filter) + "," + str(in_conf) + '\n')
 
 
 def generate_pileup_pl(bam_file, ref_file, bed_records, output_dir, thread_no):
@@ -115,7 +115,7 @@ def generate_pileup_pl(bam_file, ref_file, bed_records, output_dir, thread_no):
     smry = open(output_dir + "summary" + '_' + str(thread_no) + ".csv", 'w')
 
     for rec in all_bed_records:
-        contig, pos, end_pos, ref, alt, genotype = rec.rstrip().split('\t')
+        contig, pos, end_pos, ref, alt, genotype, qual, filter, in_conf = rec.rstrip().split('\t')
         pos = int(pos) + 1
 
         # get pileup columns from bam file
@@ -133,7 +133,7 @@ def generate_pileup_pl(bam_file, ref_file, bed_records, output_dir, thread_no):
         # label of the image and save the image
         label = genotype
         smry.write(os.path.abspath(output_dir + file_name) + ".png," + str(label) + ',' + ','.join(
-            map(str, array_shape)) + ',' + str(genotype) + '\n')
+            map(str, array_shape)) + ',' + str(genotype) + "," + str(qual) + "," + str(filter) + "," + str(in_conf) + '\n')
 
 
 def parallel_pileup_generator(bam_file, ref_file, bed_file, output_dir, threads):
@@ -169,7 +169,6 @@ def parallel_pileup_generator(bam_file, ref_file, bed_file, output_dir, threads)
         while True:
             if len(multiprocessing.active_children()) < threads:
                 break
-
 
 
 if __name__ == '__main__':
