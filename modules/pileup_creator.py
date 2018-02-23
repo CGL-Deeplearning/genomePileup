@@ -137,7 +137,6 @@ class imageChannels:
         strand_color = imageChannels.get_strand_color(self.is_rev)
         match_color = imageChannels.get_match_ref_color(self.is_match)
         get_support_color = imageChannels.get_alt_support_color(self.is_supporting)
-
         return [base_color, base_quality_color, map_quality_color, strand_color, match_color, get_support_color]
 
     @staticmethod
@@ -246,11 +245,16 @@ class PileupProcessor:
         """
         if self.leftmost_genomic_position < 0:
             self.leftmost_genomic_position = 0
+        if self.rightmost_genomic_position < 0:
+            self.rightmost_genomic_position = 0
 
         # get the reference sequence
-        ref_seq = self.ref_object.get_ref_of_region(self.contig,
+        ref_seq, error_val = self.ref_object.get_ref_of_region(self.contig,
                                                     ":"+str(self.leftmost_genomic_position+1)+ "-"
                                                     + str(self.rightmost_genomic_position+1))
+        if error_val == 1:
+            print("ERROR IN FETCHING REFERENCE: ", self.contig, self.pos, self.alt, self.genotype)
+
         ref_seq_with_insert = ''
         idx = 0
         for i in range(self.leftmost_genomic_position, self.rightmost_genomic_position+1):
@@ -443,7 +447,6 @@ class PileupProcessor:
                     read_attribute_tuple = ('*', [BASE_QUALITY_CAP], self.read_dictionary[read_id][pos][2],
                                             self.read_dictionary[read_id][pos][3])
                     read_insert_list[pos].append(read_attribute_tuple)
-
         return read_list, read_insert_list, is_supporting
 
     def get_reference_row_rgb(self, image_width):

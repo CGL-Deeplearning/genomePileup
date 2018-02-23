@@ -29,5 +29,12 @@ class RefFileProcessor:
         :param site: Site [ex 100000-200000]
         :return:
         """
-        return self.FastaFile.fetch(region=contig+site).upper()
+        ret_val = ""
+        error_val = 0
+        try:
+            ret_val = self.FastaFile.fetch(region=contig+site).upper()
+        except:
+            print("ERROR IN REF FETCH: ", contig, site)
+            error_val = 1
+        return ret_val, error_val
 

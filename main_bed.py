@@ -72,7 +72,6 @@ def generate_pileup(bam_file, ref_file, bed_file, output_dir):
 
     for rec in all_bed_records:
         contig, pos, end_pos, ref, alt, genotype, qual, filter, in_conf = rec.rstrip().split('\t')
-
         pos = int(pos) + 1
 
         # get pileup columns from bam file
