@@ -20,7 +20,9 @@ MAX_COLOR_VALUE = 254.0
 BASE_QUALITY_CAP = 40.0
 MAP_QUALITY_CAP = 60.0
 MAP_QUALITY_FILTER = 10.0
-
+MATCH_CIGAR_CODE = 0
+INSERT_CIGAR_CODE = 1
+DELETE_CIGAR_CODE = 2
 
 class imageChannels:
     """
@@ -34,9 +36,10 @@ class imageChannels:
         :param ref_base: Reference base corresponding to that pileup base
         """
         self.pileup_base = pileup_attributes[0]
-        self.map_qual = pileup_attributes[1]
-        self.base_qual = pileup_attributes[2]
-        self.is_rev = pileup_attributes[3]
+        self.base_qual = pileup_attributes[1]
+        self.map_qual = pileup_attributes[2]
+        self.cigar_code = pileup_attributes[3]
+        self.is_rev = pileup_attributes[4]
         self.ref_base = ref_base
         self.is_match = True if self.ref_base == self.pileup_base else False
         self.is_supporting = is_supporting
@@ -109,8 +112,8 @@ class imageChannels:
     @staticmethod
     def get_alt_support_color(is_in_support):
         """
-        ***NOT USED YET***
-        :param is_in_support:
+        Get support color
+        :param is_in_support: Boolean value of support
         :return:
         """
         if is_in_support is True:
@@ -119,12 +122,26 @@ class imageChannels:
             return MAX_COLOR_VALUE * 0.6
 
     @staticmethod
+    def get_cigar_color(cigar_code):
+        """
+        ***NOT USED YET***
+        :param is_in_support:
+        :return:
+        """
+        if cigar_code == 0:
+            return MAX_COLOR_VALUE
+        if cigar_code == 1:
+            return MAX_COLOR_VALUE * 0.6
+        if cigar_code == 2:
+            return MAX_COLOR_VALUE * 0.3
+
+    @staticmethod
     def get_empty_channels():
         """
         Get empty channel values
         :return:
         """
-        return [0, 0, 0, 0, 0, 0]
+        return [0, 0, 0, 0, 0, 0, 0]
 
     def get_channels(self):
         """
@@ -136,8 +153,9 @@ class imageChannels:
         map_quality_color = imageChannels.get_map_quality_color(self.map_qual)
         strand_color = imageChannels.get_strand_color(self.is_rev)
         match_color = imageChannels.get_match_ref_color(self.is_match)
-        get_support_color = imageChannels.get_alt_support_color(self.is_supporting)
-        return [base_color, base_quality_color, map_quality_color, strand_color, match_color, get_support_color]
+        support_color = imageChannels.get_alt_support_color(self.is_supporting)
+        cigar_color = imageChannels.get_cigar_color(self.cigar_code)
+        return [base_color, base_quality_color, map_quality_color, strand_color, match_color, support_color, cigar_color]
 
     @staticmethod
     def get_channels_for_ref(base):
@@ -150,10 +168,10 @@ class imageChannels:
         base_quality_color = imageChannels.get_base_quality_color(60)
         map_quality_color = imageChannels.get_map_quality_color(60)
         strand_color = imageChannels.get_strand_color(is_rev=False)
-        get_match_color = imageChannels.get_match_ref_color(is_match=True)
-        get_support_color = imageChannels.get_alt_support_color(is_in_support=True)
-
-        return [base_color, base_quality_color, map_quality_color, strand_color, get_match_color, get_support_color]
+        match_color = imageChannels.get_match_ref_color(is_match=True)
+        support_color = imageChannels.get_alt_support_color(is_in_support=True)
+        cigar_color = imageChannels.get_cigar_color(MATCH_CIGAR_CODE)
+        return [base_color, base_quality_color, map_quality_color, strand_color, match_color, support_color, cigar_color]
 
     # RGB image creator
     # ---ONLY USED FOR TESTING--- #
@@ -314,7 +332,7 @@ class PileupProcessor:
                 self.read_insert_dictionary[read_id] = {}
                 self.read_insert_dictionary[read_id][genomic_position] =''
 
-    def save_info_of_a_position(self, genomic_position, read_id, base, base_qual, map_qual, is_rev, is_in):
+    def save_info_of_a_position(self, genomic_position, read_id, base, base_qual, map_qual, is_rev, cigar_code, is_in):
         """
         Given the attributes of a base at a position
         :param genomic_position: Genomic position
@@ -329,9 +347,9 @@ class PileupProcessor:
         self.initialize_dictionaries(genomic_position, read_id, is_in)
 
         if is_in is False:
-            self.read_dictionary[read_id][genomic_position] = (base, base_qual, map_qual, is_rev)
+            self.read_dictionary[read_id][genomic_position] = (base, base_qual, map_qual, cigar_code, is_rev)
         else:
-            self.read_insert_dictionary[read_id][genomic_position] = (base, base_qual, map_qual, is_rev)
+            self.read_insert_dictionary[read_id][genomic_position] = (base, base_qual, map_qual, cigar_code, is_rev)
             self.insert_length_dictionary[genomic_position] = max(self.insert_length_dictionary[genomic_position],
                                                                   len(base))
 
@@ -345,7 +363,8 @@ class PileupProcessor:
                pileupread.alignment.query_sequence[insert_start:insert_end], \
                pileupread.alignment.query_qualities[insert_start:insert_end], \
                pileupread.alignment.mapping_quality, \
-               pileupread.alignment.is_reverse
+               pileupread.alignment.is_reverse, \
+               INSERT_CIGAR_CODE # CIGAR OPERATION IS INSERT
 
     @staticmethod
     def get_attributes_to_save(pileupcolumn, pileupread):
@@ -355,14 +374,16 @@ class PileupProcessor:
                    '*', \
                    0,\
                    pileupread.alignment.mapping_quality, \
-                   pileupread.alignment.is_reverse
+                   pileupread.alignment.is_reverse, \
+                   DELETE_CIGAR_CODE # CIGAR OPERATION DELETE
         else:
             return pileupcolumn.pos, \
                    pileupread.alignment.query_name, \
                    pileupread.alignment.query_sequence[pileupread.query_position],  \
                    pileupread.alignment.query_qualities[pileupread.query_position], \
                    pileupread.alignment.mapping_quality, \
-                   pileupread.alignment.is_reverse
+                   pileupread.alignment.is_reverse, \
+                   MATCH_CIGAR_CODE  # CIGAR OPERATION MATCH
 
     @staticmethod
     def save_image_as_png(pileup_array, save_dir, file_name):
@@ -377,13 +398,13 @@ class PileupProcessor:
                 self.reads_aligned_to_pos[pileupcolumn.pos].append(pileupread.alignment.query_name)
 
                 if pileupread.indel > 0:
-                    gen_pos, read_id, base, base_qual, map_qual, is_rev = \
+                    gen_pos, read_id, base, base_qual, map_qual, is_rev, cigar_code = \
                         self.get_attributes_to_save_indel(pileupcolumn, pileupread)
-                    self.save_info_of_a_position(gen_pos, read_id, base, base_qual, map_qual, is_rev, is_in=True)
+                    self.save_info_of_a_position(gen_pos, read_id, base, base_qual, map_qual, is_rev, cigar_code, is_in=True)
 
-                gen_pos, read_id, base, base_qual, map_qual, is_rev = \
+                gen_pos, read_id, base, base_qual, map_qual, is_rev, cigar_code = \
                     self.get_attributes_to_save(pileupcolumn, pileupread)
-                self.save_info_of_a_position(gen_pos, read_id, base, base_qual, map_qual, is_rev, is_in=False)
+                self.save_info_of_a_position(gen_pos, read_id, base, base_qual, map_qual, is_rev, cigar_code, is_in=False)
 
     def create_text_pileup(self, query_pos):
         left_most_pos = -1
@@ -445,7 +466,7 @@ class PileupProcessor:
 
                 for i in range(inserted_bases, self.insert_length_dictionary[pos]):
                     read_attribute_tuple = ('*', [BASE_QUALITY_CAP], self.read_dictionary[read_id][pos][2],
-                                            self.read_dictionary[read_id][pos][3])
+                                            INSERT_CIGAR_CODE, self.read_dictionary[read_id][pos][4])
                     read_insert_list[pos].append(read_attribute_tuple)
         return read_list, read_insert_list, is_supporting
 
@@ -524,6 +545,7 @@ class PileupProcessor:
                 if row_list[position][0][2] < MAP_QUALITY_FILTER:
                     filter_row = True
                     break
+
                 imagechannels_object = imageChannels(row_list[position][0], self.reference_base_projection[position],
                                                      is_supporting)
 
@@ -535,8 +557,9 @@ class PileupProcessor:
                     for bases in row_insert_list[position]:
                         for base_idx in range(len(bases[0])):
                             insert_ref += 1
-                            attribute_tuple = (bases[0][base_idx], bases[1][base_idx], bases[2], bases[3])
+                            attribute_tuple = (bases[0][base_idx], bases[1][base_idx], bases[2], bases[3], bases[4])
                             imagechannels_object = imageChannels(attribute_tuple, '*', is_supporting)
+
                             if self.genomic_position_projection[position] + insert_ref < image_width:
                                 image_row[self.genomic_position_projection[position] + insert_ref] = \
                                     imagechannels_object.get_channels()
