@@ -52,6 +52,9 @@ class VCFRecord:
         self.rec_alleles = rec.alleles
         self.rec_alts = rec.alts if rec.alts else '.'
         self.rec_ref = rec.ref
+        # if self.rec_not_hom is False:
+        #     self.rec_ref = '.'
+            # this saves querying the fasta file
 
     @staticmethod
     def _get_record_genotype(record):
@@ -258,12 +261,17 @@ class VCFFileProcessor:
         for record in self.vcf_records:
             # Create VCFRecord object for that record
             vcf_record = VCFRecord(record)
-
             # Filter homozygous records if hom_filter is true
             if hom_filter is True and vcf_record.rec_not_hom is False:
                 continue
-            # If the record can be added to the dictionary add it to the list
+            # if vcf_record.rec_not_hom is False and vcf_record.rec_filter == 'PASS':
+            #     # it's a homozygous record
+            #     for pos in range(record.pos, record.stop):
+            #         temp_rec = vcf_record
+            #         temp_rec.rec_pos = pos
+            #         filtered_records.append(temp_rec)
             if vcf_record.rec_filter == 'PASS':
+                # in case of het or hom_alt, just add it to the record
                 filtered_records.append(vcf_record)
         # Return the list
         return filtered_records
@@ -319,9 +327,11 @@ class VCFFileProcessor:
         :param site: Site (:100000-200000)
         :return:
         """
-
+        s_start, s_end = site.split('-')
+        s_start = int(s_start)
+        s_end = int(s_end)
         try:
-            self.vcf_records = pysam.VariantFile(self.file_path).fetch(region=contig + site)
+            self.vcf_records = pysam.VariantFile(self.file_path).fetch(contig, s_start, s_end)
         except IOError:
             sys.stderr.write("VCF FILE READ ERROR")
 

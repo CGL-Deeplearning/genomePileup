@@ -98,7 +98,7 @@ def analyze_it(img):
             if img[i][j][0] != 0:
                 print(get_base_by_color(img[i][j][0]), end='')
             else:
-                print(' ',end='')
+                print(' ', end='')
         print()
     print("CIGAR CHANNEL")
     for i in range(300):

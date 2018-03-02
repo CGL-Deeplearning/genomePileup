@@ -18,6 +18,8 @@ imageChannels: Handles how many channels to create for each base and their struc
 
 MAX_COLOR_VALUE = 254.0
 BASE_QUALITY_CAP = 40.0
+# this is used to define qualities for '*' where map quality is undefined
+BASE_QUALITY_MIN = 10.0
 MAP_QUALITY_CAP = 60.0
 MAP_QUALITY_FILTER = 10.0
 MATCH_CIGAR_CODE = 0
@@ -372,7 +374,7 @@ class PileupProcessor:
             return pileupcolumn.pos, \
                    pileupread.alignment.query_name,\
                    '*', \
-                   0,\
+                   BASE_QUALITY_MIN,\
                    pileupread.alignment.mapping_quality, \
                    pileupread.alignment.is_reverse, \
                    DELETE_CIGAR_CODE # CIGAR OPERATION DELETE
