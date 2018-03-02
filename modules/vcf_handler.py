@@ -320,21 +320,26 @@ class VCFFileProcessor:
         # Return the file
         return vcf_out
 
-    def populate_dictionary(self, contig, site, hom_filter):
+    def populate_dictionary(self, contig, site=None, hom_filter= False):
         """
         Process a file of a conting and site.
         :param contig: Contig (ex: chr3)
         :param site: Site (:100000-200000)
         :return:
         """
-        s_start, s_end = site.split('-')
-        s_start = int(s_start)
-        s_end = int(s_end)
-        try:
-            self.vcf_records = pysam.VariantFile(self.file_path).fetch(contig, s_start, s_end)
-        except IOError:
-            sys.stderr.write("VCF FILE READ ERROR")
-
+        if site != None:
+            s_start, s_end = site.split('-')
+            s_start = int(s_start)
+            s_end = int(s_end)
+            try:
+                self.vcf_records = pysam.VariantFile(self.file_path).fetch(contig, s_start, s_end)
+            except IOError:
+                sys.stderr.write("VCF FILE READ ERROR")
+        else:
+            try:
+                self.vcf_records = pysam.VariantFile(self.file_path).fetch(contig)
+            except IOError:
+                sys.stderr.write("VCF FILE READ ERROR")
         # Filter the records
         filtered_records = self._get_filtered_records(hom_filter)
         # Generate dictionary
